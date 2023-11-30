@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace Clock
 {
@@ -18,10 +20,17 @@ namespace Clock
             InitializeComponent();
         }
 
+        // notes
+        // https://stackoverflow.com/a/21633902/ - to remove label padding, set the FlatStyle
+
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
+
         private Timer Timer { get; set; }
 
-        private Color InitialColor;
-        //private static Color InitialColor      = SystemColors.ControlLight;
+
+        private        Color InitialColor;
         private static Color FirstChangeColor  = Color.Goldenrod;
         private static Color SecondChangeColor = SystemColors.Highlight;
 
@@ -29,9 +38,18 @@ namespace Clock
         private (int hour, int minute) SecondChangeTime;
         private (int hour, int minute) ChangeBackTime;
 
+        private List<DateTime> LockTimes   = new List<DateTime>();
+        private List<DateTime> UnlockTimes = new List<DateTime>();
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
             this.InitialColor = lblTime12h.ForeColor;
+
+            // ////////////////////////////////////////////////////////////////
 
             // position!
             // https://stackoverflow.com/questions/1363374/showing-a-windows-form-on-a-secondary-monitor
@@ -43,9 +61,27 @@ namespace Clock
             {
                 this.Top  = positionOnScreen.WorkingArea.Bottom - this.Height;
                 this.Left = positionOnScreen.WorkingArea.Right  - this.Width ;
+#if DEBUG
+                this.Top = positionOnScreen.WorkingArea.Bottom - (this.Height * 2);     // if DEBUG, show it above the currently running one
+                this.Opacity = 0.95D;                                                   // and since that's over text on the desktop background, make it more opaque
+#endif
             }
 
+            // ////////////////////////////////////////////////////////////////
 
+            // oooooooh can we detect locks/unlocks??
+            // https://stackoverflow.com/a/652574/
+
+            SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+
+            //// TODO for now
+            //ttpLockedUnlockedTimes.SetToolTip(lblDate, "None yet!");
+            //lblDate.Cursor = Cursors.Hand;
+
+            SetFormSizeBasedOnPanels();
+
+
+            // ////////////////////////////////////////////////////////////////
 
             #region Parse times from App.config
 
@@ -85,11 +121,15 @@ namespace Clock
 
             #endregion
 
-            // timer
+            // ////////////////////////////////////////////////////////////////
+
+            // initialize timer and start
             this.Timer = new Timer { Interval = 1000 };
             this.Timer.Tick += Timer_Tick;
             this.Timer.Start();
         }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
 
         private void Timer_Tick(object sender, EventArgs e)
         {
@@ -165,7 +205,137 @@ namespace Clock
             }
             */
             #endregion
+
         }
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // https://stackoverflow.com/a/652574/
+        private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            switch (e.Reason)
+            {
+                case SessionSwitchReason.SessionUnlock:
+                case SessionSwitchReason.SessionLogon : this.UnlockTimes.Add(DateTime.Now); AddLockTimesToListBox(); break; //SetToolTip(); break;
+
+                case SessionSwitchReason.SessionLock  :
+                case SessionSwitchReason.SessionLogoff: this.  LockTimes.Add(DateTime.Now); AddLockTimesToListBox(); break; // SetToolTip(); break;
+
+                //case SessionSwitchReason.ConsoleConnect      :
+                //case SessionSwitchReason.ConsoleDisconnect   :
+                //case SessionSwitchReason.RemoteConnect       :
+                //case SessionSwitchReason.RemoteDisconnect    :
+                //case SessionSwitchReason.SessionRemoteControl:
+
+                //default: break;
+            }
+        }
+
+
+
+        private void RemoveOldLockUnlockTimes()
+        {
+            // remove lock/unlock times that aren't from today
+            // (to keep the list from growing and growing)
+            var startOfDay = DateTime.Today;
+
+            this.UnlockTimes.RemoveAll(d => d < startOfDay);
+            this.LockTimes  .RemoveAll(d => d < startOfDay);
+        }
+
+
+        private void SetToolTip()
+        {
+            // remove old times
+            RemoveOldLockUnlockTimes();
+
+            var unlockedMsg = "";
+            var lockedMsg   = "";
+
+            if (this.UnlockTimes.Any())
+            {
+                unlockedMsg = "Unlocked: " + string.Join(", ", this.UnlockTimes.Select(d => d.ToShortTimeString()) );
+            }
+
+            if (this.LockTimes.Any())
+            {
+                lockedMsg = "Locked: " + string.Join(", ", this.LockTimes.Select(d => d.ToShortTimeString()));
+            }
+
+            var tooltipText = (lockedMsg + Environment.NewLine + unlockedMsg).Trim();
+
+            // set tooltip text - it shows when hovering over the date label (at the bottom)
+            ttpLockedUnlockedTimes.SetToolTip(lblDate, tooltipText);
+            lblDate.Cursor = Cursors.Hand;
+        }
+
+        private void AddLockTimesToListBox()
+        {
+            // remove old times
+            RemoveOldLockUnlockTimes();
+
+            // clear current text in list boxes
+            lbxUnlockTimes.Items.Clear();
+            lbxLockTimes  .Items.Clear();
+
+            // order with most recent on top
+            var ulOrdered = this.UnlockTimes.OrderByDescending(d => d);
+            var lOrdered  = this.LockTimes  .OrderByDescending(d => d);
+
+            // add to list boxes
+            foreach (var item in ulOrdered) { lbxUnlockTimes.Items.Add( item.ToShortTimeString() ); }
+            foreach (var item in lOrdered ) { lbxLockTimes  .Items.Add( item.ToShortTimeString() ); }
+        }
+
+
+
+        private void lblDate_Click(object sender, EventArgs e)
+        {
+            // toggle
+            splitContainer.Panel2Collapsed = !splitContainer.Panel2Collapsed;
+
+            // TODO just for now
+            if (splitContainer.Panel2Collapsed) lblDate.ForeColor = Color.Goldenrod;
+            else                                lblDate.ForeColor = Color.Red;
+
+            SetFormSizeBasedOnPanels();
+        }
+
+        private void SetFormSizeBasedOnPanels()
+        {
+            // if Panel2 is hidden, shrink form width
+            // if Panel2 is showing, increase form width
+
+            /*
+            if (splitContainer.Panel2Collapsed) { splitContainer.Width = splitContainer.Panel1MinSize; }
+            else                                { splitContainer.Width = splitContainer.Panel1MinSize + splitContainer.Panel2MinSize + 1; }     // the splitter has to be at least 1px
+            */
+
+            // The SplitterPanel's width cannot be set explicitly. Set the SplitterDistance on the SplitContainer instead.
+            //splitContainer.Panel1.Width = splitContainer.Panel1MinSize;
+            splitContainer.SplitterDistance = splitContainer.Panel1MinSize;
+
+
+            // ok now set form resize mode to Grow/Shrink so see if that does it automatically
+            // actualy, looks like splitContainer is not changing width
+            // even when setting it to 175, it doesn't actually change!         ahhhhhhhh it's because it expands Panel 1!!!
+
+            int goalSize;
+            if (splitContainer.Panel2Collapsed) { goalSize = splitContainer.Panel1MinSize; }
+            else                                { goalSize = splitContainer.Panel1MinSize + splitContainer.Panel2MinSize + 1; }
+
+
+            Debug.WriteLine($"Panel 2 collapsed   : {splitContainer.Panel2Collapsed}");
+            Debug.WriteLine($"Form width          : {this.Width}px");
+            Debug.WriteLine($"SplitContainer width: {splitContainer.Width}px   - goal: {goalSize}px");
+            Debug.WriteLine($"Panel 1 width        : {splitContainer.Panel1.Width}px");        // hmm
+            Debug.WriteLine("---------------------------------------------------" + Environment.NewLine);
+        }
+
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -175,5 +345,9 @@ namespace Clock
                 this.Timer.Dispose();
             }
         }
+
+
+        // ////////////////////////////////////////////////////////////////////////////////////////////////
+
     }
 }
