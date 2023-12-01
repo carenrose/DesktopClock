@@ -32,6 +32,7 @@
             System.Windows.Forms.Label lblLockTimes;
             System.Windows.Forms.Label lblUnlockTimes;
             System.Windows.Forms.Label lblVerticalLine;
+            System.Windows.Forms.Label lblDuration;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.lblTime24h = new System.Windows.Forms.Label();
             this.lblTime12h = new System.Windows.Forms.Label();
@@ -44,42 +45,43 @@
             this.lbxUnlockTimes = new System.Windows.Forms.ListBox();
             this.pnlMain = new System.Windows.Forms.Panel();
             this.pnlLockTimes = new System.Windows.Forms.Panel();
-            this.ttpClickDateInfo = new System.Windows.Forms.ToolTip(this.components);
             this.lbxDuration = new System.Windows.Forms.ListBox();
+            this.ttpClickDateInfo = new System.Windows.Forms.ToolTip(this.components);
             lblLockTimes = new System.Windows.Forms.Label();
             lblUnlockTimes = new System.Windows.Forms.Label();
             lblVerticalLine = new System.Windows.Forms.Label();
+            lblDuration = new System.Windows.Forms.Label();
             this.pnlMain.SuspendLayout();
             this.pnlLockTimes.SuspendLayout();
             this.SuspendLayout();
             // 
             // lblLockTimes
             // 
-            lblLockTimes.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             lblLockTimes.AutoSize = true;
             lblLockTimes.BackColor = System.Drawing.Color.Transparent;
             lblLockTimes.Font = new System.Drawing.Font("Segoe UI Semibold", 8F, System.Drawing.FontStyle.Bold);
             lblLockTimes.ForeColor = System.Drawing.SystemColors.ControlDark;
-            lblLockTimes.Location = new System.Drawing.Point(139, 4);
+            lblLockTimes.Location = new System.Drawing.Point(5, 4);
             lblLockTimes.Margin = new System.Windows.Forms.Padding(2);
             lblLockTimes.Name = "lblLockTimes";
-            lblLockTimes.Size = new System.Drawing.Size(63, 13);
+            lblLockTimes.Size = new System.Drawing.Size(43, 13);
             lblLockTimes.TabIndex = 4;
-            lblLockTimes.Text = "Lock Times";
+            lblLockTimes.Text = "Locked";
             lblLockTimes.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // lblUnlockTimes
             // 
+            lblUnlockTimes.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             lblUnlockTimes.AutoSize = true;
             lblUnlockTimes.BackColor = System.Drawing.Color.Transparent;
             lblUnlockTimes.Font = new System.Drawing.Font("Segoe UI Semibold", 8F, System.Drawing.FontStyle.Bold);
             lblUnlockTimes.ForeColor = System.Drawing.SystemColors.ControlDark;
-            lblUnlockTimes.Location = new System.Drawing.Point(3, 4);
+            lblUnlockTimes.Location = new System.Drawing.Point(143, 4);
             lblUnlockTimes.Margin = new System.Windows.Forms.Padding(2);
             lblUnlockTimes.Name = "lblUnlockTimes";
-            lblUnlockTimes.Size = new System.Drawing.Size(75, 13);
+            lblUnlockTimes.Size = new System.Drawing.Size(55, 13);
             lblUnlockTimes.TabIndex = 4;
-            lblUnlockTimes.Text = "Unlock Times";
+            lblUnlockTimes.Text = "Unlocked";
             lblUnlockTimes.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // lblVerticalLine
@@ -89,6 +91,20 @@
             lblVerticalLine.Name = "lblVerticalLine";
             lblVerticalLine.Size = new System.Drawing.Size(1, 128);
             lblVerticalLine.TabIndex = 7;
+            // 
+            // lblDuration
+            // 
+            lblDuration.AutoSize = true;
+            lblDuration.BackColor = System.Drawing.Color.Transparent;
+            lblDuration.Font = new System.Drawing.Font("Segoe UI Semibold", 7F, System.Drawing.FontStyle.Bold);
+            lblDuration.ForeColor = System.Drawing.SystemColors.ControlDark;
+            lblDuration.Location = new System.Drawing.Point(75, 5);
+            lblDuration.Margin = new System.Windows.Forms.Padding(2);
+            lblDuration.Name = "lblDuration";
+            lblDuration.Size = new System.Drawing.Size(46, 12);
+            lblDuration.TabIndex = 4;
+            lblDuration.Text = "Away for";
+            lblDuration.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // lblTime24h
             // 
@@ -194,14 +210,14 @@
             // lbxLockTimes
             // 
             this.lbxLockTimes.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.lbxLockTimes.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(90)))), ((int)(((byte)(90)))), ((int)(((byte)(90)))));
             this.lbxLockTimes.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.lbxLockTimes.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.lbxLockTimes.Font = new System.Drawing.Font("Consolas", 10F, System.Drawing.FontStyle.Bold);
             this.lbxLockTimes.ForeColor = System.Drawing.Color.LightGray;
             this.lbxLockTimes.FormattingEnabled = true;
-            this.lbxLockTimes.Location = new System.Drawing.Point(133, 22);
+            this.lbxLockTimes.Location = new System.Drawing.Point(8, 20);
             this.lbxLockTimes.Margin = new System.Windows.Forms.Padding(2, 3, 3, 3);
             this.lbxLockTimes.Name = "lbxLockTimes";
             this.lbxLockTimes.SelectionMode = System.Windows.Forms.SelectionMode.None;
@@ -212,14 +228,14 @@
             // lbxUnlockTimes
             // 
             this.lbxUnlockTimes.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.lbxUnlockTimes.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(90)))), ((int)(((byte)(90)))), ((int)(((byte)(90)))));
             this.lbxUnlockTimes.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.lbxUnlockTimes.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.lbxUnlockTimes.Font = new System.Drawing.Font("Consolas", 10F, System.Drawing.FontStyle.Bold);
             this.lbxUnlockTimes.ForeColor = System.Drawing.Color.LightGray;
             this.lbxUnlockTimes.FormattingEnabled = true;
-            this.lbxUnlockTimes.Location = new System.Drawing.Point(6, 22);
+            this.lbxUnlockTimes.Location = new System.Drawing.Point(133, 20);
             this.lbxUnlockTimes.Margin = new System.Windows.Forms.Padding(3, 3, 2, 3);
             this.lbxUnlockTimes.Name = "lbxUnlockTimes";
             this.lbxUnlockTimes.SelectionMode = System.Windows.Forms.SelectionMode.None;
@@ -251,6 +267,7 @@
             this.pnlLockTimes.Controls.Add(this.lbxLockTimes);
             this.pnlLockTimes.Controls.Add(this.lbxDuration);
             this.pnlLockTimes.Controls.Add(this.lbxUnlockTimes);
+            this.pnlLockTimes.Controls.Add(lblDuration);
             this.pnlLockTimes.Controls.Add(lblLockTimes);
             this.pnlLockTimes.Controls.Add(lblUnlockTimes);
             this.pnlLockTimes.Location = new System.Drawing.Point(185, 0);
@@ -258,12 +275,6 @@
             this.pnlLockTimes.Size = new System.Drawing.Size(200, 128);
             this.pnlLockTimes.TabIndex = 6;
             this.pnlLockTimes.Visible = false;
-            // 
-            // ttpClickDateInfo
-            // 
-            this.ttpClickDateInfo.AutoPopDelay = 10000;
-            this.ttpClickDateInfo.InitialDelay = 150;
-            this.ttpClickDateInfo.ReshowDelay = 100;
             // 
             // lbxDuration
             // 
@@ -276,13 +287,20 @@
             this.lbxDuration.Font = new System.Drawing.Font("Consolas", 8F, System.Drawing.FontStyle.Bold);
             this.lbxDuration.ForeColor = System.Drawing.Color.LightGray;
             this.lbxDuration.FormattingEnabled = true;
-            this.lbxDuration.Location = new System.Drawing.Point(75, 22);
+            this.lbxDuration.Location = new System.Drawing.Point(77, 20);
             this.lbxDuration.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
             this.lbxDuration.Name = "lbxDuration";
             this.lbxDuration.SelectionMode = System.Windows.Forms.SelectionMode.None;
             this.lbxDuration.Size = new System.Drawing.Size(54, 106);
             this.lbxDuration.TabIndex = 5;
             this.lbxDuration.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.listBox_DrawItem);
+            // 
+            // ttpClickDateInfo
+            // 
+            this.ttpClickDateInfo.AutoPopDelay = 10000;
+            this.ttpClickDateInfo.InitialDelay = 150;
+            this.ttpClickDateInfo.ReshowDelay = 100;
+            this.ttpClickDateInfo.ShowAlways = true;
             // 
             // Form1
             // 
