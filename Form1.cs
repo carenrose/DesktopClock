@@ -46,10 +46,9 @@ namespace Clock
         private (int hour, int minute) SecondChangeTime;
         private (int hour, int minute) ChangeBackTime;
 
-        private List<DateTime> LockTimes   = new List<DateTime>();
-        private List<DateTime> UnlockTimes = new List<DateTime>();
-        //private List<TimeSpan> Durations   = new List<TimeSpan>();
-        private Dictionary<DateTime, TimeSpan> Durations = new Dictionary<DateTime, TimeSpan>();        // key is lock time
+        private List<DateTime>                 LockTimes   = new List<DateTime>();
+        private List<DateTime>                 UnlockTimes = new List<DateTime>();
+        private Dictionary<DateTime, TimeSpan> Durations   = new Dictionary<DateTime, TimeSpan>();        // key is lock time
 
         // ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -90,6 +89,7 @@ namespace Clock
 
             // ////////////////////////////////////////////////////////////////
 
+            // if we have a "Persist" file, read from there
             ParseTimesFromPersistFile();
             UpdateLockTimesListBoxes();
 
@@ -251,8 +251,8 @@ namespace Clock
             var persistFile = ConfigHelper.GetValue("LockTimePersistFile");
             if (persistFile != null && File.Exists(persistFile))
             {
-                var addShortLocks = ConfigHelper.GetValueBool("AddShortLocks"); // will determine whether to ignore short ones or not
-                var earliestDate  = DateTime.Today.AddDays(-7);                 // don't add dates to the list from more than a week ago
+                var addShortLocks = ConfigHelper.GetValueBool("AddShortLocks");     // will determine whether to ignore short ones or not
+                var earliestDate  = DateTime.Today.AddDays(-7);                     // don't add dates to the list from more than a week ago
 
 
                 // get all lines
@@ -279,15 +279,26 @@ namespace Clock
                 // calculate durations
                 // this.Durations.Add(mostRecentLockTime, now - mostRecentLockTime);
 
-                var unlocksOrdered = this.UnlockTimes.OrderBy(d => d);
-                var   locksOrdered = this.LockTimes  .OrderBy(d => d);
+                var unlocksOrdered = this.UnlockTimes.OrderBy(d => d).ToList();
+                var   locksOrdered = this.LockTimes  .OrderBy(d => d).ToList();
 
                 foreach (var unlock in unlocksOrdered)
                 {
                     var prevLock = locksOrdered.LastOrDefault(d => d < unlock);
                     if (prevLock != default)
                     {
-                        this.Durations.Add(prevLock, unlock - prevLock);
+                        var duration = (unlock - prevLock);
+
+                        // if duration of time locked is > 1 minute, or we're adding short locks
+                        if (addShortLocks || duration.TotalMinutes > 1)
+                        {
+                            this.Durations.Add(prevLock, duration);
+                        }
+                        else    // otherwise, remove the lock/unlock pair
+                        {
+                            this.UnlockTimes.Remove(unlock);
+                            this.LockTimes  .Remove(prevLock);
+                        }
                     }
                 }
 
@@ -314,7 +325,9 @@ namespace Clock
                 case SessionSwitchReason.SessionLogoff:
                     // add to list
                     this.LockTimes.Add(now);
-                    AddTimeToPersistFile(Persist_TypeLock, now);                                        // file
+
+                    // add to persist file
+                    AddTimeToPersistFile(Persist_TypeLock, now);
 
                     // add to box
                     UpdateLockTimesListBoxes();
@@ -330,7 +343,7 @@ namespace Clock
                 case SessionSwitchReason.SessionLogon :
                     var mostRecentLockTime = this.LockTimes.OrderByDescending(d => d).FirstOrDefault();
 
-                    var addShortLocks = ConfigHelper.GetValueBool("AddShortLocks");     // defaults to false
+                    var addShortLocks = ConfigHelper.GetValueBool("AddShortLocks");
                     if (this.LockTimes.Any() && !addShortLocks)
                     {
                         // if the duration the computer was locked is < 1 minute (since last lock)
@@ -343,24 +356,22 @@ namespace Clock
                         {
                             // add to list
                             this.UnlockTimes.Add(now);
-                            AddTimeToPersistFile(Persist_TypeUnlock, now);                              // file
-
-                            //this.Durations.Add(now - mostRecentLockTime);
-                            this.Durations.Add(mostRecentLockTime, now - mostRecentLockTime);
+                            this.Durations  .Add(mostRecentLockTime, now - mostRecentLockTime);
                         }
                     }
                     else
                     {
                         // add to list
                         this.UnlockTimes.Add(now);
-                        AddTimeToPersistFile(Persist_TypeUnlock, now);                                  // file
 
                         if (mostRecentLockTime != null)
                         {
-                            //this.Durations.Add(now - mostRecentLockTime);
                             this.Durations.Add(mostRecentLockTime, now - mostRecentLockTime);
                         }
                     }
+
+                    // add to persist file even if it's a short lock
+                    AddTimeToPersistFile(Persist_TypeUnlock, now);
 
                     // update listbox
                     UpdateLockTimesListBoxes(); 
@@ -372,13 +383,18 @@ namespace Clock
 
         private void UpdateLockTimesListBoxes()
         {
+            // ////////////////////////////////////////////////////////////////
             // remove lock/unlock times that aren't from today
             // (to keep the list from growing and growing)
+            // ////////////////////////////////////////////////////////////////
+
             var startOfDay = DateTime.Today;
 
+            // remove old unlock times
             this.UnlockTimes.RemoveAll(d => d < startOfDay);
-            //this.LockTimes  .RemoveAll(d => d < startOfDay);
 
+            // remove old lock times
+            // leave the lastest end-of-day lock from the previous day worked
             var oldLockTimes = this.LockTimes.Where(d => d < startOfDay)
                 .OrderByDescending(d => d).Skip(1)      // order with most recent first, then skip removing the last lock of the previous day
                 .ToList();
@@ -387,16 +403,18 @@ namespace Clock
                 this.LockTimes.Remove(oldLockTime);
             }
 
-            // remove older durations!
+            // remove old durations
             var oldDurations = this.Durations.Where(kvp => kvp.Key < startOfDay).ToList();
             foreach (var kvp in oldDurations)
             {
                 this.Durations.Remove(kvp.Key);
             }
 
+
+            // ////////////////////////////////////////////////////////////////
+            // this determines the format shown in the listboxes
             // ////////////////////////////////////////////////////////////////
 
-            // this determines the format
             var shortLockDurationsShown = ConfigHelper.GetValueBool("AddShortLocks");
 
             var timeFormat = (shortLockDurationsShown)
@@ -406,17 +424,20 @@ namespace Clock
                 ? @"h\h\ mm\:ss"        // you have to escape spaces too I guess
                 : @"h\h\ mm\m"  ;
 
+
+            // ////////////////////////////////////////////////////////////////
+            // clear current text in list boxes
             // ////////////////////////////////////////////////////////////////
 
-            // clear current text in list boxes
             lbxUnlockTimes.Items.Clear();
             lbxLockTimes  .Items.Clear();
             lbxDuration   .Items.Clear();
 
-            // ////////////////////////////////////////////////////////////////
 
+            // ////////////////////////////////////////////////////////////////
             // add blank item to lock times at top
             // because it lines up that way (you can read across)
+            // ////////////////////////////////////////////////////////////////
 
             lbxDuration.Items.Add((shortLockDurationsShown) ? "-- -- --" : "-- --");
 
@@ -426,46 +447,41 @@ namespace Clock
                 lbxLockTimes.Items.Add((shortLockDurationsShown) ? "-- -- --" : "-- --");
             }
 
+
+            // ////////////////////////////////////////////////////////////////
+            // add to list boxes
             // ////////////////////////////////////////////////////////////////
 
             // order with earliest on top
-            // OrderByDescending - most recent on top
             var ulOrdered = this.UnlockTimes.OrderBy(d => d);
             var lOrdered  = this.LockTimes  .OrderBy(d => d);
 
-            // ////////////////////////////////////////////////////////////////
+            // unlocks
+            foreach (var item in ulOrdered)
+            {
+                lbxUnlockTimes.Items.Add( item.ToString(timeFormat) );
+            }
 
-            // add to list boxes
-            foreach (var item in ulOrdered) { lbxUnlockTimes.Items.Add( item.ToString(timeFormat) ); }
-            //foreach (var item in lOrdered ) { lbxLockTimes  .Items.Add( item.ToString(timeFormat) ); }
-
+            // locks
             foreach (var item in lOrdered)
             {
-                if (item < startOfDay) { lbxLockTimes.Items.Add( item.ToString("HH:mm ddd").Substring(0, 8) ); }
+                if (item < startOfDay) { lbxLockTimes.Items.Add( item.ToString("HH:mm ddd").Substring(0, 8) ); }    // for last lock of prev day - just hour:minute, 2-letter day abbreviation
                 else                   { lbxLockTimes.Items.Add( item.ToString(timeFormat) ); }
             }
 
-            /*
-            //for (int i = this.Durations.Count - 1; i >= 0; i--)
-            for (int i = 0; i < this.Durations.Count; i++)
-            {
-                var item = this.Durations[i];
-                lbxDuration.Items.Add((shortLockDurationsShown) 
-                    ? item.ToString(@"h\:mm\:ss") 
-                    : item.ToString(@"h\:mm"));
-            }
-            */
+            // durations
             foreach (var kvp in this.Durations)
             {
                 lbxDuration.Items.Add( kvp.Value.ToString(timespanFormat) );
             }
-
         }
+
+
 
         // ////////////////////////////////////////////////
 
-        // alt row color
-        // https://stackoverflow.com/a/2555062/
+        // how to style with alt row color - from https://stackoverflow.com/a/2555062/
+
         private void listBox_DrawItem(object sender, DrawItemEventArgs e)
         {
             e.DrawBackground();
@@ -484,11 +500,12 @@ namespace Clock
             var itemText  = (sender as ListBox).Items[e.Index].ToString();
 
             // make the first item a different color
-            // but if there isn't a last lock time of the previous day (for example, on a Monday after the weekend), then it'll just end up highlighting the first lock of today
-            // maybe that can be fixed when adding ... [done]
-            var itemColor = (e.Index == 0)
-                ? ((sender == this.lbxUnlockTimes) ? Color.LawnGreen : Color.LightSalmon)       // first unlock time of the day green      (last lock from yesterday orangish)
-                : e.ForeColor;
+            var itemColor = e.ForeColor;
+            if (e.Index == 0)
+            {
+                if      (sender == this.lbxUnlockTimes) { itemColor = Color.LawnGreen;   }      // first unlock time of the day green
+                else if (sender == this.lbxLockTimes  ) { itemColor = Color.LightSalmon; }      // last lock from yesterday     orangish
+            }
 
             // draw the text of the list item, not doing this will only show the background color
             g.DrawString(itemText, 
@@ -525,6 +542,8 @@ namespace Clock
                 this.Width = pnlMain.Width;
             }
         }
+
+        // TODO would like to get it to extend out to the *left* of the time?
 
         private void MoveFormPosition_FromPanelVisibility()
         {
