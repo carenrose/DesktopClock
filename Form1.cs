@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace Clock
 {
@@ -18,6 +19,10 @@ namespace Clock
     {
         public Form1()
         {
+            // write time to file
+            AddTimeToPersistFile(Persist_TypeAppStarted, DateTime.Now);
+            System.Threading.Thread.Sleep(100);     // give it a tiny bit of time
+
             InitializeComponent();
         }
 
@@ -230,8 +235,10 @@ namespace Clock
 
         #region Writing to/Reading from persist file
 
-        private const string Persist_TypeUnlock = "Unlock";
-        private const string Persist_TypeLock   = "Locked";
+        private const string Persist_TypeUnlock     = "Unlock";
+        private const string Persist_TypeAppStarted = "AppStart";
+        private const string Persist_TypeLock       = "Locked";
+        private const string Persist_TypeAppClosed  = "AppClosed";
 
         private const string Persist_DateTimeFormat = "yyyy/MM/dd_HH:mm:ss.ff";
 
@@ -269,8 +276,10 @@ namespace Clock
 
                         if (date.HasValue && date > earliestDate)
                         {
-                            if      (type == Persist_TypeUnlock) { this.UnlockTimes.Add(date.Value); }
-                            else if (type == Persist_TypeLock  ) { this.LockTimes  .Add(date.Value); }
+                            if      (type == Persist_TypeUnlock ||
+                                     type == Persist_TypeAppStarted) { this.UnlockTimes.Add(date.Value); }
+                            else if (type == Persist_TypeLock   ||
+                                     type == Persist_TypeAppClosed ) { this.LockTimes  .Add(date.Value); }
                         }
                     }
                 }
@@ -292,7 +301,10 @@ namespace Clock
                         // if duration of time locked is > 1 minute, or we're adding short locks
                         if (addShortLocks || duration.TotalMinutes > 1)
                         {
-                            this.Durations.Add(prevLock, duration);
+                            if (!this.Durations.ContainsKey(prevLock))      // ok why failing now? who knows
+                            {
+                                this.Durations.Add(prevLock, duration);
+                            }
                         }
                         else    // otherwise, remove the lock/unlock pair
                         {
@@ -470,7 +482,7 @@ namespace Clock
             }
 
             // durations
-            foreach (var kvp in this.Durations)
+            foreach (var kvp in this.Durations.OrderBy(kvp => kvp.Key))
             {
                 lbxDuration.Items.Add( kvp.Value.ToString(timespanFormat) );
             }
@@ -578,8 +590,10 @@ namespace Clock
                 this.Timer.Stop();
                 this.Timer.Dispose();
             }
-        }
 
+            // write time to file
+            AddTimeToPersistFile(Persist_TypeAppClosed, DateTime.Now);
+        }
 
         // ////////////////////////////////////////////////////////////////////////////////////////////////
 
